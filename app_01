@@ -1,0 +1,201 @@
+🏷️ 🔥 NAMING CONVENTION (USE THIS EXACTLY)
+
+Let’s assume:
+
+Project = xyz
+Environment = prod
+Region = centralindia
+Resource	Name
+Resource Group	rg-xyz-prod-ci
+VNet	vnet-xyz-prod-ci
+App Service	app-xyz-prod-ci
+App Plan	asp-xyz-prod-ci
+SQL Server	sql-xyz-prod-ci
+SQL DB	sqldb-xyz-prod
+App Gateway	agw-xyz-prod-ci
+Key Vault	kv-xyz-prod-ci
+VM (Jumpbox)	vm-xyz-jump-prod
+Bastion	bas-xyz-prod-ci
+Private Endpoint	pe-sql-xyz-prod
+🧱 🔥 PHASE 1: NETWORK SETUP
+✅ Step 1: Create Resource Group
+
+👉 Azure Portal
+
+Search: Resource Groups
+Click Create
+
+Fill:
+
+Name: rg-xyz-prod-ci
+Region: Central India
+✅ Step 2: Create VNet
+
+👉 Search: Virtual Networks → Create
+
+Fill:
+
+Name: vnet-xyz-prod-ci
+Address Space: 10.0.0.0/16
+✅ Step 3: Create Subnets
+
+Inside VNet → Subnets:
+
+Subnet	Address
+app-subnet	10.0.1.0/24
+pe-subnet	10.0.2.0/24
+vm-subnet	10.0.3.0/24
+AzureBastionSubnet	10.0.4.0/27
+🗄️ 🔥 PHASE 2: SQL DATABASE (PRIVATE)
+✅ Step 4: Create SQL Server + DB
+
+👉 Search: SQL Database → Create
+
+Fill:
+
+DB Name: sqldb-xyz-prod
+Server: sql-xyz-prod-ci
+Authentication: SQL + Azure AD
+✅ Step 5: Disable Public Access
+Go to SQL Server → Networking
+Select:
+Public Network Access = Disable
+✅ Step 6: Create Private Endpoint
+
+👉 SQL → Networking → Private Endpoint → Add
+
+Fill:
+
+Name: pe-sql-xyz-prod
+VNet: vnet-xyz-prod-ci
+Subnet: pe-subnet
+
+👉 Enable:
+✔ Private DNS Integration
+
+🌐 🔥 PHASE 3: APP SERVICE
+✅ Step 7: Create App Service Plan
+
+👉 Search: App Service Plan
+
+Name: asp-xyz-prod-ci
+SKU: B1 / S1
+✅ Step 8: Create App Service
+
+👉 Search: Web App
+
+Name: app-xyz-prod-ci
+Plan: above plan
+✅ Step 9: Enable Managed Identity
+
+👉 App Service → Identity
+
+Turn System Assigned = ON
+✅ Step 10: VNet Integration
+
+👉 App Service → Networking
+
+VNet Integration → Add
+Select app-subnet
+✅ Step 11: Private Endpoint for App
+
+👉 App Service → Networking → Private Endpoint → Add
+
+Subnet: pe-subnet
+🔐 🔥 PHASE 4: KEY VAULT + CERTIFICATE
+✅ Step 12: Create Key Vault
+
+👉 Search: Key Vault
+
+Name: kv-xyz-prod-ci
+✅ Step 13: Upload PFX Certificate
+
+👉 Key Vault → Certificates → Import
+
+Upload .pfx
+🌍 🔥 PHASE 5: APPLICATION GATEWAY
+✅ Step 14: Create Application Gateway
+
+👉 Search: Application Gateway
+
+Name: agw-xyz-prod-ci
+Tier: WAF v2
+✅ Step 15: Configure
+🔹 Frontend
+Public IP
+🔹 Listener
+HTTPS (443)
+Select cert from Key Vault
+🔹 Backend Pool
+Add App Service
+🔹 Routing Rule
+Connect Listener → Backend
+🌐 🔥 PHASE 6: DNS + DOMAIN
+✅ Step 16: DNS Mapping
+
+In your domain provider:
+
+A Record:
+www.xyz.com → App Gateway Public IP
+🛠️ 🔥 PHASE 7: ADMIN ACCESS
+✅ Step 17: Create Jump Box VM
+
+👉 VM → Create
+
+Name: vm-xyz-jump-prod
+Subnet: vm-subnet
+✅ Step 18: Create Bastion
+
+👉 Bastion → Create
+
+Subnet: AzureBastionSubnet
+✅ Step 19: Connect
+Laptop → Bastion → VM → SQL
+🔐 🔥 PHASE 8: ON-PREM AD INTEGRATION
+✅ Step 20: Sync AD to Azure
+
+👉 Install:
+Azure AD Connect on on-prem server
+
+Steps:
+
+Download Azure AD Connect
+Install → Express Settings
+Sync users to Azure
+✅ Step 21: Set Azure AD Admin for SQL
+
+👉 SQL Server → Azure AD Admin
+
+Select synced user
+✅ Step 22: Grant DB Access
+
+Run in SSMS:
+
+CREATE USER [user@domain.com] FROM EXTERNAL PROVIDER;
+ALTER ROLE db_owner ADD MEMBER [user@domain.com];
+🔄 🔥 PHASE 9: DATA MIGRATION
+✅ Option 1: Azure Data Migration Service (BEST)
+Steps:
+Create Azure DMS
+Source: SQL VM (IaaS)
+Target: Azure SQL DB
+Start Migration
+✅ Option 2: Backup & Restore
+Take backup from SQL VM
+Upload to Azure Storage
+Restore to Azure SQL
+🔐 🔥 FINAL SECURITY CHECK
+
+✔ WAF enabled
+✔ SQL private
+✔ App private
+✔ Managed Identity
+✔ Key Vault
+✔ Bastion access
+
+🎯 FINAL FLOW
+User → DNS → App Gateway → App Service → Private Endpoint → SQL
+Admin → Bastion → VM → SQL
+🧠 FINAL INTERVIEW LINE
+
+“I implemented a secure Azure architecture with private endpoints, WAF protection, managed identity, and hybrid identity using Azure AD Connect, along with secure database migration using Azure DMS.”
